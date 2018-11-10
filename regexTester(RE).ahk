@@ -24,14 +24,10 @@
 	;setup regex box
 	gui.Add("Text", , "RegEx String:")
 	regex := gui.Add("Edit", "-wrap r1 w" width, defaultRegex)
-	
-	;setup start position box
-	gui.Add("Text", , "Start Position:")
-	startpos := gui.Add("Edit", "-wrap r1 w" width, defaultStartpos)
 
 	;setup text box
 	gui.Add("Text", , "Text:")
-    text := New RichEdit(gui, "r30 w" width, defaultText)
+    text := New RichEdit(gui, "r35 w" width, defaultText)
 
 	;setup result box
 	gui.Add("Text", , "Results:")
@@ -74,7 +70,7 @@ mySort(a, b) {
 
 ;When values in regex, startpos, or text changes this function is triggered
 doRegEx() {
-	global gui, regex, text, result, startpos
+	global gui, regex, text, result
 	
 	;reset the result box
 	result.value := ""
@@ -85,21 +81,9 @@ doRegEx() {
 		return
 	}
 	
-	;get startpos value
-	if startpos.value == "" {
-		spv := 1
-	}
-	else {
-		spv := startpos.value
-		if !(spv is "Integer") || spv == 0 {
-			result.value .= "Start Position must be a non-zero integer. (Blank = 1)"
-			return
-		}
-	}
-	
 	;attempt RegExMatch
 	try {
-		pos := RegExMatch(text.text, regex.value, m, spv)
+		pos := RegExMatch(text.text, regex.value, m)
 		;match found
 		if pos {
             
