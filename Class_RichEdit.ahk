@@ -117,9 +117,11 @@ Class RichEdit {
       return this.ctrl.Focus()
    }
    OnEvent(events := "", cbFunc := "", MaxThreads := 1) {
-      this.SetEventMask(events)
+      r := this.SetEventMask(events)
       if isObject(cbFunc) && cbFunc.isBuiltIn != ""
-         OnMessage(0x4E, cbFunc, MaxThreads), OnMessage(0x111, cbFunc, MaxThreads) 
+         OnMessage(0x4E, cbFunc, MaxThreads) 
+         ;OnMessage(0x111, cbFunc, MaxThreads) 
+      return r
    }
    Opt(param*) {
       this.Options(param*)
@@ -145,7 +147,7 @@ Class RichEdit {
    ; ===================================================================================================================
    __New(Gui, Options := "", DefaultText := "", MultiLine := True) {
       Static WS_TABSTOP := 0x10000, WS_HSCROLL := 0x100000, WS_VSCROLL := 0x200000, WS_VISIBLE := 0x10000000
-           , WS_CHILD := 0x40000000
+           , WS_CHILD := 0x40000000, WS_BORDER := 0x800000
            , WS_EX_CLIENTEDGE := 0x200, WS_EX_STATICEDGE := 0x20000
            , ES_MULTILINE := 0x0004, ES_AUTOVSCROLL := 0x40, ES_AUTOHSCROLL := 0x80, ES_NOHIDESEL := 0x0100
            , ES_WANTRETURN := 0x1000, ES_DISABLENOSCROLL := 0x2000, ES_SUNKEN := 0x4000, ES_SAVESEL := 0x8000
@@ -175,7 +177,7 @@ Class RichEdit {
          }
       }
       ; Specify default styles & exstyles
-      Styles := WS_TABSTOP | WS_VISIBLE | WS_CHILD | ES_AUTOHSCROLL
+      Styles := WS_TABSTOP | WS_VISIBLE | WS_CHILD | ES_AUTOHSCROLL ;| WS_BORDER
       If (MultiLine)
          Styles |= WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_NOHIDESEL | ES_WANTRETURN ; | WS_HSCROLL
                  | ES_DISABLENOSCROLL | ES_SAVESEL ; | ES_SELECTIONBAR does not work properly
@@ -385,13 +387,11 @@ Class RichEdit {
 
       ; --------------------------------------------------------------------------------------------------------------------------------
       IREOleCB_GetClipboardData(IREOleCB, CharRange, Operation, DataObj) { ; IRichEditOleCallback::GetClipboardData - not implemented
-         OutputDebug(A_ThisFunc)
          Return 0x80004001 ; E_NOTIMPL
       }
 
       ; --------------------------------------------------------------------------------------------------------------------------------
       IREOleCB_GetDragDropEffect(IREOleCB, Drag, KeyState, Effect) {  ; IRichEditOleCallback::GetDragDropEffect - returns S_OK
-         OutputDebug(A_ThisFunc)
          Return 0 ; S_OK
       }
 
@@ -647,8 +647,8 @@ Class RichEdit {
          }
       }
       
-      SendMessage(0x0445, 0, Mask, , "ahk_id " . This.HWND)
-      Return ErrorLevel
+      r := SendMessage(0x0445, 0, Mask, , "ahk_id " . This.HWND)
+      return r
    }
    ; -------------------------------------------------------------------------------------------------------------------
    ; Loading and storing RTF format
@@ -751,18 +751,17 @@ Class RichEdit {
    ; Text and selection
    ; -------------------------------------------------------------------------------------------------------------------
    RegExFunc(needle, function) {
-      if !(isObject(function) && function.isBuiltIn != "")
-         return false
-      
-      
-      text := this.GetText()
-      sp := 0, len := 1, match := []
-      while sp := RegExMatch(text, needle, m, sp + len) {
-         len := m.len
-         _match := SubStr(text, sp, m.Len), match.push(_match)
-         function.Call(_match, sp, len)
+      if isObject(function) && function.isBuiltIn != "" {
+         textLen := this.GetTextLen(), text := this.GetText(), sp := 0, len := 1, match := []
+         while sp < textLen && sp := RegExMatch(text, needle, m, sp + len)
+            len := m.len > 0 ? m.len : 1
+            , _match := SubStr(text, sp, m.Len)
+            , match.push(_match)
+            , function.Call(_match, sp, len)
+         return match
       }
-      return match
+      else
+         return false
    }
    
    FindText(Find, Mode := "") { ; Finds Unicode text within a rich edit control.
@@ -852,9 +851,7 @@ Class RichEdit {
       ; EM_GETTEXTLENGTHEX = 0x045F
       VarSetCapacity(GTL, 8, 0)     ; GETTEXTLENGTHEX structure
       NumPut(1200, GTL, 4, "UInt")  ; codepage = Unicode
-      
-      r := SendMessage(0x045F, &GTL, 0, , "ahk_id " . This.HWND)
-      Return r
+      return SendMessage(0x045F, &GTL, 0, , "ahk_id " . This.HWND)
    }
    ; -------------------------------------------------------------------------------------------------------------------
    GetTextRange(Min, Max) { ; Retrieves a specified range of characters from a rich edit control.
@@ -932,8 +929,7 @@ Class RichEdit {
       VarSetCapacity(CR, 8, 0)
       NumPut(Start, CR, 0, "Int")
       NumPut(End,   CR, 4, "Int")
-      SendMessage(0x0437, 0, &CR, , "ahk_id " . This.HWND)
-      Return ErrorLevel
+      return SendMessage(0x0437, 0, &CR, , "ahk_id " . This.HWND)
    }
    ; -------------------------------------------------------------------------------------------------------------------
    ; Appearance, styles, and options
@@ -1258,8 +1254,7 @@ Class RichEdit {
          Mode := Font.Default ? 0 : 1
          CF2.Mask := Mask
          CF2.Effects := Effects
-         SendMessage(0x0444, Mode, CF2.CF2, , "ahk_id " . This.HWND)
-         Return ErrorLevel
+         return SendMessage(0x0444, Mode, CF2.CF2, , "ahk_id " . This.HWND)
       }
       Return False
    }
