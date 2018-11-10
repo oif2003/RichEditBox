@@ -30,12 +30,12 @@ onMatch(oRE, _, sp, len) =>	oRE.SetSel(sp - 1, sp + len - 1) && oRE.SetFont({BkC
 doRegEx() {
 	global gui, regex, text, result, n2r
 	rstr := regex.value, result.value := ""	;reset the result box
-	
 	;replace escaped `(backticks)
 	list := n2r.value ? {"``n":"`r", "\n":"\r", "``t":"`t", "``r":"`r"} : {"``n":"`n", "``t":"`t", "``r":"`r"}
 	for k, v in list
 		qreplace(rstr, k, v)
-		
+	;force use of \ as escape character
+
 	try	;attempt RegExMatch
 		if pos := RegExMatch(text.text, rstr, m) { ;if we have a match
 			
@@ -57,7 +57,7 @@ doRegEx() {
 			matchedText := Sort(matchedText, "U F mySort D" chr(0x2DDF))
 			_match := StrSplit(matchedText, chr(0x2DDF)), matchedText := ""
             for k, v in _match 
-				_v := "`t" StrReplace(v, "`n", "`n`t"), matchedText .= format("{:-12}{:}", (k == 1 ? "" : "`n") . "[" k "] x " . _mDict[v],  _v) 
+				_v := "`t" StrReplace(v, "`r", "`n`t"), matchedText .= format("{:-12}{:}", (k == 1 ? "" : "`n") . "[" k "] x " . _mDict[v],  _v) 
 
 			;print results
 			result.value .=   "First match at: " . pos . "`n"
