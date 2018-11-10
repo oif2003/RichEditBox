@@ -35,9 +35,8 @@ doRegEx() {
 	for k, v in list
 		qreplace(rstr, k, v)
 	;force use of \ as escape character
-	if false && InStr(regex.value, "``")
-		result.value .= "Must use \ (backslash) as escape character instead of `` (backtick)."
-	else try	;attempt RegExMatch
+
+	try	;attempt RegExMatch
 		if pos := RegExMatch(text.text, rstr, m) { ;if we have a match
 			
             sel := text.GetSel()    ;save caret position
