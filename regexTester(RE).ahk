@@ -22,6 +22,7 @@
 	gui.show(), doRegEx()
 
 f5::doRegEx()
+;*To do: add navigation to next/prev match, add replace box, replace by function?
 
 ;called by RegExFunc in RichEdit for each match ... to do: add RTF directly
 onMatch(oRE, _, sp, len) =>	oRE.SetSel(sp - 1, sp + len - 1) && oRE.SetFont({BkColor:"YELLOW"})
@@ -30,67 +31,64 @@ onMatch(oRE, _, sp, len) =>	oRE.SetSel(sp - 1, sp + len - 1) && oRE.SetFont({BkC
 doRegEx() {
 	global gui, regex, text, result, n2r
 	rstr := regex.value, result.value := ""	;reset the result box
+	
 	;replace escaped `(backticks)
 	list := n2r.value ? {"``n":"`r", "\n":"\r", "``t":"`t", "``r":"`r"} : {"``n":"`n", "``t":"`t", "``r":"`r"}
 	for k, v in list
 		qreplace(rstr, k, v)
-	;force use of \ as escape character
 
-	try	;attempt RegExMatch
+	;attempt RegExMatch
+	try	
 		if pos := RegExMatch(text.text, rstr, m) { ;if we have a match
 			
-            sel := text.GetSel()    ;save caret position
-            text.text := text.text  ;reset highlight and dump formatting (highlights)
-            match := text.RegExFunc(rstr, (param*) => onMatch(text, param*)) ;highlight matches with onMatch()
-            text.SetSel(sel.S, sel.E) ;restore caret position
+			;highlight matches - to do: restore scroll position.  				*To do: use RTF directly
+            sel := text.GetSel(), text.text := text.text   						;save caret position and reset formatting
+            match := text.RegExFunc(rstr, (param*) => onMatch(text, param*)) 	;highlight matches with onMatch()
+            text.SetSel(sel.S, sel.E) 											;restore caret position
 
-            ;sort matches by length then by alphabetical order.  remove duplicatess
+            ;prepare matchedText for result output
             for k, v in match
 				matchedText .= (k==1 ? "" : chr(0x2DDF)) . v 
-			matchedText := Sort(matchedText, "F mySort D" chr(0x2DDF))
-
-            ;prepare matchedText
-			_match := StrSplit(matchedText, chr(0x2DDF)), _mDict := {}
-            for k, v in _match
-				_mDict.HasKey(v) ? _mDict[v] += 1 : _mDict[v] := 1
-
-			matchedText := Sort(matchedText, "U F mySort D" chr(0x2DDF))
-			_match := StrSplit(matchedText, chr(0x2DDF)), matchedText := ""
-            for k, v in _match 
-				_v := "`t" StrReplace(v, "`r", "`n`t"), matchedText .= format("{:-12}{:}", (k == 1 ? "" : "`n") . "[" k "] x " . _mDict[v],  _v) 
+			matchedText := Sort(matchedText, "F mySort D" chr(0x2DDF))			;sort lengthwise and alphabetically
+			_match := StrSplit(matchedText, chr(0x2DDF)), _mDict := {}			;count duplicates
+            for k, v in _match													;
+				_mDict.HasKey(v) ? _mDict[v] += 1 : _mDict[v] := 1				;*To do: can probably make this better	
+			matchedText := Sort(matchedText, "U F mySort D" chr(0x2DDF))		;remove duplicates and keep sort order by re-sorting
+			_match := StrSplit(matchedText, chr(0x2DDF)), matchedText := ""		;
+            for k, v in _match 													;prep output
+				_v := "`t" StrReplace(v, "`r", "`n`t")
+				, matchedText .= format("{:-12}{:}", (k == 1 ? "" : "`n") "[" k "] x " . _mDict[v],  _v) 
 
 			;print results
 			result.value .=   "First match at: " . pos . "`n"
 							. "Total matches : " . match.Count() . "`n"
 							. "Unique matches: " . _match.Count() . "`n" . matchedText . "`n`n"
 							. "Number of captured subpatterns: " . m.Count() . "`n"
-
 			Loop m.Count() 
-				result.value .= "[" A_Index "]" 
-				. (m.Name(A_Index) ? " (" m.Name(A_Index) ")" : "") ;if it has a name show it
+				result.value .= "[" A_Index "]" . (m.Name(A_Index) ? " (" m.Name(A_Index) ")" : "") 	;if it has a name show it
 				. " pos: " m.Pos(A_Index) . ", len: " m.Len(A_Index) " => " . m.value(A_Index) "`n"
 
 			if m.Mark()	;untested, included for completeness sake
 				result.value .= "Name of last encountered (*MARK:NAME): " m.Mark() "`n"
 		}
 		else result.value .= "No matches found.`n", text.text := text.text ;reset format
-	catch e ;RegExMatch exceptions : straight from AutoHotkey documentation
+			
+	;RegExMatch exceptions : straight from AutoHotkey documentation
+	catch e 
 		result.value := e.message != "PCRE execution error." ? e.message : 'PCRE execution error. (' e.extra ')`n`nLikely errors: "too many possible empty-string matches" (-22), "recursion too deep" (-21), and "reached match limit" (-8). If these happen, try to redesign the pattern to be more restrictive, such as replacing each * with a ?, +, or a limit like {0,3} wherever feasible.'
 	
-	;sort by length then by alphabetical order
-	mySort(a, b) => StrLen(a) != StrLen(b) ? StrLen(a) - StrLen(b) : ((a > b) + !(a = b) - 1.5) * (a != b) * 2
-	
-	qreplace(byref str, a, b) => str := StrReplace(str, a, b)
+	;helper functions
+	mySort(a, b) => StrLen(a) != StrLen(b) ? StrLen(a) - StrLen(b) : ((a > b) + !(a = b) - 1.5) * (a != b) * 2 ;sort by length then by alphabetical order
+	qreplace(byref str, a, b) => str := StrReplace(str, a, b)	;by reference StrReplace wrapper
 }
 
+;helper class for adding gui tooltips
 class gcToolTip {
 	static gTT := {}
-	
 	Add(guictrl, tt, to := 4000) { ;gui, tooltip, timeout
 		this.gTT.Count() == 0 && OnMessage(0x200, (param*) => this.WM_MOUSEMOVE(param*))
 		this.gTT[guictrl.Hwnd] := {tooltip:tt, timeout:to}
 	}
-	
 	WM_MOUSEMOVE(_, __, ___, Hwnd) {
 		static PrevHwnd
 		if (Hwnd != PrevHwnd)
