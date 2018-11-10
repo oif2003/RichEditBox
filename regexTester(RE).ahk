@@ -1,4 +1,4 @@
-﻿/*
+/*
 	Simple Regular Expression Tester for AutoHotkey v2 using RegExMatch()
 	Tested with build: AutoHotkey_2.0-a100-52515e2
 */
@@ -7,49 +7,49 @@
 
 ;Default Values
 	defaultText := 'History`n`n'
-      . 'The first public beta of AutoHotkey was released on November 10, 2003[10] after author Chris Mallett`'s proposal to integrate hotkey support into AutoIt v2 failed to generate response from the AutoIt community.[11][12] So the author began his own program from scratch basing the syntax on AutoIt v2 and using AutoIt v3 for some commands and the compiler.[13] Later, AutoIt v3 switched from GPL to closed source because of "other projects repeatedly taking AutoIt code" and "setting themselves up as competitors."[14]`n`n'
-      . 'In 2010, AutoHotkey v1.1 (originally called AutoHotkey_L) became the platform for ongoing development of AutoHotkey.[15] Another port of the program is AutoHotkey.dll.[16]`n`n'
-      . 'https://en.wikipedia.org/wiki/AutoHotkey`n'
+	  . 'The first public beta of AutoHotkey was released on November 10, 2003[10] after author Chris Mallett`'s proposal to integrate hotkey support into AutoIt v2 failed to generate response from the AutoIt community.[11][12] So the author began his own program from scratch basing the syntax on AutoIt v2 and using AutoIt v3 for some commands and the compiler.[13] Later, AutoIt v3 switched from GPL to closed source because of "other projects repeatedly taking AutoIt code" and "setting themselves up as competitors."[14]`n`n'
+	  . 'In 2010, AutoHotkey v1.1 (originally called AutoHotkey_L) became the platform for ongoing development of AutoHotkey.[15] Another port of the program is AutoHotkey.dll.[16]`n`n'
+	  . 'https://en.wikipedia.org/wiki/AutoHotkey`n'
 
 	defaultRegex := "A[^\s]*?y"
 	defaultStartpos := 1
 	width := 800
-    bwidth := 200
+	bwidth := 200
 	font := "Consolas"
 
 ;Gui Stuff
 	gui := guiCreate()
 	gui.SetFont(, font)
-	
+
 	;setup regex box
 	gui.Add("Text", , "RegEx String:")
 	regex := gui.Add("Edit", "-wrap r1 w" width, defaultRegex)
 
 	;setup text box
 	gui.Add("Text", , "Text:")
-    text := New RichEdit(gui, "r35 w" width, defaultText)
+	text := New RichEdit(gui, "r35 w" width, defaultText)
 
 	;setup result box
 	gui.Add("Text", , "Results:")
 	result := gui.Add("Edit", "+readonly r15 w" width)
-    
-    ;test button
-    button := gui.Add("Button", "w" bwidth " x" Width/2+gui.MarginX-bwidth/2 " Default", "Test RegEx")
+
+	;test button
+	button := gui.Add("Button", "w" bwidth " x" Width/2+gui.MarginX-bwidth/2 " Default", "Test RegEx")
 
 	;Run doRegEx() whenever changes are detected
 	button.OnEvent("Click", ()=>doRegEx())
-    
+
 	gui.show()
-	
+
 	;first run
 	doRegEx()
 
 
 ;this function is called by RegExFunc in RichEdit for each match
 onMatch(oRE, mt, sp, len) {
-      oRE.SetSel(sp - 1, sp + len - 1)
-      Font := {BkColor:"YELLOW"}
-      oRE.SetFont(Font)
+	oRE.SetSel(sp - 1, sp + len - 1)
+	Font := {BkColor:"YELLOW"}
+	oRE.SetFont(Font)
 }
 
 ;sort by length then by alphabetical order
@@ -84,30 +84,29 @@ doRegEx() {
 	;attempt RegExMatch
 	try {
 		pos := RegExMatch(text.text, regex.value, m)
+        
 		;match found
 		if pos {
+            sel := text.GetSel()    ;save caret position
+            text.text := text.text  ;reset highlight and dump formatting (highlights)
             
-            ;save caret position
-            sel := text.GetSel()
-            ;reset highlight and dump formatting (highlights)
-            text.text := text.text
             ;highlight matches (actual highlighting is done in onMatch())            
             match := text.RegExFunc(regex.value, (param*)=>onMatch(text, param*))
             matchCount := match.Count()
-            ;restore caret position
-            text.SetSel(sel.S, sel.E)
+           
+            text.SetSel(sel.S, sel.E)    ;restore caret position
             
             ;sort matches by length then by alphabetical order.  remove duplicatess
             for k, v in match
-                  matchedText .= (k==1 ? "" : chr(0x2DDF)) v 
+				matchedText .= (k==1 ? "" : chr(0x2DDF)) v 
             matchedText := Sort(matchedText, "U F mySort D" chr(0x2DDF))
 
             ;prepare matchedText
 			_match := StrSplit(matchedText, chr(0x2DDF))
             matchedText := ""
             for k, v in _match {
-                  _v := "`t" StrReplace(v, "`n", "`n`t")
-                  matchedText .= (k==1 ? "" : "`n") "[" k "]`t" _v
+				_v := "`t" StrReplace(v, "`n", "`n`t")
+				matchedText .= (k==1 ? "" : "`n") "[" k "]`t" _v
             }
             
 			;print results
@@ -116,6 +115,7 @@ doRegEx() {
 			result.value .= "Unique matches: " _match.Count() "`n"
 			result.value .= matchedText "`n`n"
 			result.value .= "Number of captured subpatterns: " m.Count() "`n"
+            
 			numDigits := floor(log(m.count())) + 1		;get number of digits of m.count()
 			Loop m.Count() {
 				nameStr := m.Name(A_Index) ? " (" m.Name(A_Index) ")" : ""
@@ -132,9 +132,7 @@ doRegEx() {
 		;no matches
 		else {
 			result.value .= "No matches found.`n"
-            
-            ;reset format
-            text.text := text.text
+            text.text := text.text ;reset format
 		}
 	}
 	;RegExMatch exceptions : straight from AutoHotkey documentation
