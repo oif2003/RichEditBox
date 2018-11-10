@@ -30,12 +30,12 @@ onMatch(oRE, _, sp, len) =>	oRE.SetSel(sp - 1, sp + len - 1) && oRE.SetFont({BkC
 doRegEx() {
 	global gui, regex, text, result, n2r
 	rstr := regex.value, result.value := ""	;reset the result box
+	
 	;replace escaped `(backticks)
 	list := n2r.value ? {"``n":"`r", "\n":"\r", "``t":"`t", "``r":"`r"} : {"``n":"`n", "``t":"`t", "``r":"`r"}
 	for k, v in list
 		qreplace(rstr, k, v)
-	;force use of \ as escape character
-
+		
 	try	;attempt RegExMatch
 		if pos := RegExMatch(text.text, rstr, m) { ;if we have a match
 			
