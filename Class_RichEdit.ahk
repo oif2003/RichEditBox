@@ -92,14 +92,15 @@ Class RichEdit {
          return this.Type
       }
    }
-   Value {
-      get {
-         ;to be implemented
-      }
-      set {
-         ;to be implemented
-      }
-   }
+   ;~ static myRTF
+   ;~ Value {
+      ;~ get {
+         ;~ return this.myRTF
+      ;~ }
+      ;~ set {
+         ;~ this.RTFtext(value)
+      ;~ }
+   ;~ }
    Visible {
       get {
          return this.ctrl.Visible
@@ -1192,7 +1193,7 @@ Class RichEdit {
       ;        Size    : optional font size in points
       ;        Style   : optional string of one or more of the following styles
       ;                  B = bold, I = italic, U = underline, S = strikeout, L = subscript
-      ;                  H = superschript, P = protected, N = normal
+      ;                  H = superscript, P = protected, N = normal
       ;        Color   : optional text color as RGB integer value or HTML color name
       ;                  "Auto" for "automatic" (system's default) color
       ;        BkColor : optional text background color (see Color)
