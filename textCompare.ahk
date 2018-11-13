@@ -2,14 +2,14 @@
 #Include Class_RichEdit.ahk
 ;#Include Print.ahk
 
-default1 := "Longest common subsequence problem`n`n`tThe longest common subsequence (LCS) problem is the problem of finding the longest subsequence common to all sequences in a set of sequences (often just two sequences). It differs from the longest common substring problem: unlike substrings, subsequences are not required to occupy consecutive positions within the original sequences. The longest common subsequence problem is a classic computer science problem, the basis of data comparison programs such as the diff utility, and has applications in computational linguistics and bioinformatics. It is also widely used by revision control systems such as Git for reconciling multiple changes made to a revision-controlled collection of files.`n`nhttps://en.wikipedia.org/wiki/Longest_common_subsequence_problem`n`n3.141592653589793238462643383239502884127169799375105840974944592307816406286..."
-default2 := "Longest common subsequence problem (LCS)`n`n`tThe LCS problem is about finding the longest subsequence common to all sequences in a set of sequences (often just two sequences). It differs from the longest common substring problem.  Unlike substrings, subsequences are not required to occupy consecutive positions within the original sequences. The longest common subsequence problem is a classic computer science problem, and is the basis of data comparison programs such as the diff utility.  It also has applications in computational linguistics and bioinformatics, and is also widely used by revision control systems such as Git for reconciling multiple changes made to a collection of files.`n`nhttps://en.wikipedia.org/wiki/Longest_common_subsequence_problem`n`n3.141592653589793238462643383279502884197169399375105820974944592307816406286..."
+default1 := "Longest common subsequence problem`n`n`tThe longest common subsequence (LCS) problem is the problem of finding the longest subsequence common to all sequences in a set of sequences (often just two sequences). It differs from the longest common substring problem: unlike substrings, subsequences are not required to occupy consecutive positions within the original sequences. The longest common subsequence problem is a classic computer science problem, the basis of data comparison programs such as the diff utility, and has applications in computational linguistics and bioinformatics. It is also widely used by revision control systems such as Git for reconciling multiple changes made to a revision-controlled collection of files.`n`nhttps://en.wikipedia.org/wiki/Longest_common_subsequence_problem`n`n3.141592653589793238462643383239502884127169799375105840974944592307816406286...`n`nPut old version here to see what has been deleted."
+default2 := "Longest common subsequence problem (LCS)`n`n`tThe LCS problem is about finding the longest subsequence common to all sequences in a set of sequences (often just two sequences). It differs from the longest common substring problem.  Unlike substrings, subsequences are not required to occupy consecutive positions within the original sequences. The longest common subsequence problem is a classic computer science problem, and is the basis of data comparison programs such as the diff utility.  It also has applications in computational linguistics and bioinformatics, and is also widely used by revision control systems such as Git for reconciling multiple changes made to a collection of files.`n`nhttps://en.wikipedia.org/wiki/Longest_common_subsequence_problem`n`n3.141592653589793238462643383279502884197169399375105820974944592307816406286...`n`nPut new version here to see what has been added."
 
 twidth := 600, bwidth := 150, bwidth2 := 100, opts := "r40"
 gui := GuiCreate(,"Basic Text Comparison")
 t1 := new RichEdit(gui, opts " 0x100000 w" twidth)				;enable horizontal scroll
 t2 := new RichEdit(gui, opts " 0x100000 w" twidth " xp" twidth)	;enable horizontal scroll
-btn := gui.Add("Button", "Default w" bwidth " x" gui.MarginX + twidth - bwidth/2, "Compare")
+btn := gui.Add("Button", "Default w" bwidth " x" gui.MarginX + twidth - bwidth/2, "Compare/Update")
 btn.OnEvent("Click", ()=>compare())
 gui.OnEvent("Close", ()=>ExitApp())
 
@@ -66,37 +66,46 @@ compare() {
 		de := ["`n", "`r"]
 	
 	a := strsplit(t1text, de), b := strsplit(t2text, de), c := lcs(a, b)
-	t1s := 1, t1e := 1, t2s := 1, t2e := 1
-	
+	t1s := 1, t1e := 1, t2s := 1, t2e := 1, t1m := [], t2m := []
 	for _, v in c {
 		
 		;Deleted
 		while (a[t1e] !== v)
 			t1e++
-		if t1e > t1s {
-			if radc.value
-				start := t1s - 1, end := t1e - 1
-			else if radw.value
-				start := wordStart(a, t1s), end := wordStart(a, t1e - 1) + StrLen(a[t1e - 1])
-			else if radl.value
-				start := lineStart(a, t1s), end := lineStart(a, t1e - 1) + StrLen(a[t1e - 1])
-			t1.SetSel(start, end), t1.SetFont({BkColor:"RED", Color:"WHITE"})
-			,t1Arr.Push(SubStr(t1text, start + 1, end - start))
-		} t1s := ++t1e
+		if t1e > t1s
+			t1m.push([t1s, t1e-1])
+		t1s := ++t1e
 
 		;Inserted
 		while (b[t2e] !== v)
 			t2e++
-		if t2e > t2s {
-			if radc.value
-				start := t2s - 1, end := t2e - 1
-			else if radw.value
-				start := wordStart(b, t2s), end := wordStart(b, t2e - 1) + StrLen(b[t2e - 1])
-			else if radl.value
-				start := lineStart(b, t2s), end := lineStart(b, t2e - 1) + StrLen(b[t2e - 1])
-			t2.SetSel(start, end), t2.SetFont({BkColor:"GREEN", Color:"WHITE"})
-			,t2Arr.Push(SubStr(t2text, start + 1, end - start))
-		} t2s := ++t2e
+		if t2e > t2s
+			t2m.push([t2s, t2e-1])
+		t2s := ++t2e
+	}
+	
+	consolidate(t1m, a)
+	for _, v in t1m {
+		if radc.value
+			start := v[1] - 1, end := v[2]
+		else if radw.value
+			start := wordStart(a, v[1]), end := wordStart(a, v[2]) + StrLen(a[v[2]])
+		else if radl.value
+			start := lineStart(a, v[1]), end := lineStart(a, v[2]) + StrLen(a[v[2]])
+		 t1.SetSel(start, end), t1.SetFont({BkColor:"RED", Color:"WHITE"})
+		,t1Arr.Push(SubStr(t1text, start + 1, end - start))
+	}
+	
+	consolidate(t2m, b)
+	for _, v in t2m {
+		if radc.value
+			start := v[1] - 1, end := v[2]
+		else if radw.value
+			start := wordStart(b, v[1]), end := wordStart(b, v[2]) + StrLen(b[v[2]])
+		else if radl.value
+			start := lineStart(b, v[1]), end := lineStart(b, v[2]) + StrLen(b[v[2]])
+		 t2.SetSel(start, end), t2.SetFont({BkColor:"GREEN", Color:"WHITE"})
+		,t2Arr.Push(SubStr(t2text, start + 1, end - start))
 	}
 	
 	;Leftovers
@@ -111,9 +120,34 @@ compare() {
 	,t2.SetSel(start2, -1), t2.SetFont({BkColor:"GREEN", Color:"WHITE"})
 	,t2.SetSel(0, 0), t2.ScrollCaret(), t2Arr.Push(SubStr(t2text, start2 + 1))
 	
+	
 	;-------------------------------------------------------------------------------------------
 	;nested helper functions for compare()
-	lineStart(lineArr, index) {	;find line start position
+	
+	consolidate(tm, t) {	;combine adjacent changes
+		loop {
+			skip := false
+			for k, v in tm
+				if k > 1 && tm[k-1][2] + 1 == v[1] {
+					tm[k-1][2] := v[2], skip := k
+					break
+				}	
+			if !skip {
+				for k, v in tm {
+					if t[v[2]] == t[v[1]-1] {
+						tm[k][1] := v[1]-1, tm[k][2] := v[2]-1
+						break
+					}
+					if k == tm.Length()
+						break 2
+				}
+			}
+			else 
+				tm.RemoveAt(skip)
+		}	
+	}
+	
+	lineStart(lineArr, index) {		;find line start position
 		len := 0
 		loop index - 1
 			_len := StrLen(lineArr[A_Index]) ,len += _len + 1
@@ -160,7 +194,3 @@ compare() {
 		Return t
 	}
 }
-
-
-
-
