@@ -22,58 +22,20 @@
 	gui.show(), doRegEx()
 
 f5::doRegEx()
-<<<<<<< HEAD
-
-;called by RegExFunc in RichEdit for each match ... to do: add RTF directly
-onMatch(oRE, _, sp, len) =>	oRE.SetSel(sp - 1, sp + len - 1) && oRE.SetFont({BkColor:"YELLOW"})
-
-=======
 ;*To do: add navigation to next/prev match, add replace box, replace by function?
 
 ;called by RegExFunc in RichEdit for each match ... to do: add RTF directly
 onMatch(oRE, _, sp, len) =>	oRE.SetSel(sp - 1, sp + len - 1) && oRE.SetFont({BkColor:"YELLOW"})
 
->>>>>>> 275f8e706e816fa0f2a07f7e7c03beb42f5167b6
 ;perform RegEx, highlight and print results
 doRegEx() {
 	global gui, regex, text, result, n2r
 	rstr := regex.value, result.value := ""	;reset the result box
-<<<<<<< HEAD
-=======
 	
->>>>>>> 275f8e706e816fa0f2a07f7e7c03beb42f5167b6
 	;replace escaped `(backticks)
 	list := n2r.value ? {"``n":"`r", "\n":"\r", "``t":"`t", "``r":"`r"} : {"``n":"`n", "``t":"`t", "``r":"`r"}
 	for k, v in list
 		qreplace(rstr, k, v)
-<<<<<<< HEAD
-	;force use of \ as escape character
-	if false && InStr(regex.value, "``")
-		result.value .= "Must use \ (backslash) as escape character instead of `` (backtick)."
-	else try	;attempt RegExMatch
-		if pos := RegExMatch(text.text, rstr, m) { ;if we have a match
-			
-            sel := text.GetSel()    ;save caret position
-            text.text := text.text  ;reset highlight and dump formatting (highlights)
-            match := text.RegExFunc(rstr, (param*) => onMatch(text, param*)) ;highlight matches with onMatch()
-            text.SetSel(sel.S, sel.E) ;restore caret position
-
-            ;sort matches by length then by alphabetical order.  remove duplicatess
-            for k, v in match
-				matchedText .= (k==1 ? "" : chr(0x2DDF)) . v 
-			matchedText := Sort(matchedText, "F mySort D" chr(0x2DDF))
-
-            ;prepare matchedText
-			_match := StrSplit(matchedText, chr(0x2DDF)), _mDict := {}
-            for k, v in _match
-				_mDict.HasKey(v) ? _mDict[v] += 1 : _mDict[v] := 1
-
-			matchedText := Sort(matchedText, "U F mySort D" chr(0x2DDF))
-			_match := StrSplit(matchedText, chr(0x2DDF)), matchedText := ""
-            for k, v in _match 
-				_v := "`t" StrReplace(v, "`n", "`n`t"), matchedText .= format("{:-12}{:}", (k == 1 ? "" : "`n") . "[" k "] x " . _mDict[v],  _v) 
-
-=======
 
 	;attempt RegExMatch
 	try	
@@ -97,41 +59,19 @@ doRegEx() {
 				_v := "`t" StrReplace(v, "`r", "`n`t")
 				, matchedText .= format("{:-12}{:}", (k == 1 ? "" : "`n") "[" k "] x " . _mDict[v],  _v) 
 
->>>>>>> 275f8e706e816fa0f2a07f7e7c03beb42f5167b6
 			;print results
 			result.value .=   "First match at: " . pos . "`n"
 							. "Total matches : " . match.Count() . "`n"
 							. "Unique matches: " . _match.Count() . "`n" . matchedText . "`n`n"
 							. "Number of captured subpatterns: " . m.Count() . "`n"
-<<<<<<< HEAD
-
-			Loop m.Count() 
-				result.value .= "[" A_Index "]" 
-				. (m.Name(A_Index) ? " (" m.Name(A_Index) ")" : "") ;if it has a name show it
-=======
 			Loop m.Count() 
 				result.value .= "[" A_Index "]" . (m.Name(A_Index) ? " (" m.Name(A_Index) ")" : "") 	;if it has a name show it
->>>>>>> 275f8e706e816fa0f2a07f7e7c03beb42f5167b6
 				. " pos: " m.Pos(A_Index) . ", len: " m.Len(A_Index) " => " . m.value(A_Index) "`n"
 
 			if m.Mark()	;untested, included for completeness sake
 				result.value .= "Name of last encountered (*MARK:NAME): " m.Mark() "`n"
 		}
 		else result.value .= "No matches found.`n", text.text := text.text ;reset format
-<<<<<<< HEAD
-	catch e ;RegExMatch exceptions : straight from AutoHotkey documentation
-		result.value := e.message != "PCRE execution error." ? e.message : 'PCRE execution error. (' e.extra ')`n`nLikely errors: "too many possible empty-string matches" (-22), "recursion too deep" (-21), and "reached match limit" (-8). If these happen, try to redesign the pattern to be more restrictive, such as replacing each * with a ?, +, or a limit like {0,3} wherever feasible.'
-	
-	;sort by length then by alphabetical order
-	mySort(a, b) => StrLen(a) != StrLen(b) ? StrLen(a) - StrLen(b) : ((a > b) + !(a = b) - 1.5) * (a != b) * 2
-	
-	qreplace(byref str, a, b) => str := StrReplace(str, a, b)
-}
-
-class gcToolTip {
-	static gTT := {}
-	
-=======
 			
 	;RegExMatch exceptions : straight from AutoHotkey documentation
 	catch e 
@@ -145,15 +85,10 @@ class gcToolTip {
 ;helper class for adding gui tooltips
 class gcToolTip {
 	static gTT := {}
->>>>>>> 275f8e706e816fa0f2a07f7e7c03beb42f5167b6
 	Add(guictrl, tt, to := 4000) { ;gui, tooltip, timeout
 		this.gTT.Count() == 0 && OnMessage(0x200, (param*) => this.WM_MOUSEMOVE(param*))
 		this.gTT[guictrl.Hwnd] := {tooltip:tt, timeout:to}
 	}
-<<<<<<< HEAD
-	
-=======
->>>>>>> 275f8e706e816fa0f2a07f7e7c03beb42f5167b6
 	WM_MOUSEMOVE(_, __, ___, Hwnd) {
 		static PrevHwnd
 		if (Hwnd != PrevHwnd)
