@@ -126,26 +126,28 @@ compare() {
 	;nested helper functions for compare()
 	
 	consolidate(tm, t) {	;combine adjacent changes
-		loop {
-			skip := false
-			for k, v in tm
-				if k > 1 && tm[k-1][2] + 1 == v[1] {
-					tm[k-1][2] := v[2], skip := k
-					break
-				}	
-			if !skip {
-				for k, v in tm {
-					if t[v[2]] == t[v[1]-1] {
-						tm[k][1] := v[1]-1, tm[k][2] := v[2]-1
+		if tm.Length() > 1 {
+			loop {
+				skip := false
+				for k, v in tm
+					if k > 1 && tm[k-1][2] + 1 == v[1] {
+						tm[k-1][2] := v[2], skip := k
 						break
+					}	
+				if !skip {
+					for k, v in tm {
+						if t[v[2]] == t[v[1]-1] {
+							tm[k][1] := v[1]-1, tm[k][2] := v[2]-1
+							break
+						}
+						if k == tm.Length()
+							break 2
 					}
-					if k == tm.Length()
-						break 2
 				}
-			}
-			else 
-				tm.RemoveAt(skip)
-		}	
+				else 
+					tm.RemoveAt(skip)
+			}	
+		}
 	}
 	
 	lineStart(lineArr, index) {		;find line start position
