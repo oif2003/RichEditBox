@@ -6,6 +6,7 @@
 ; OS Version:     Win 10 (x64)
 ; Function:       The class provides some wrapper functions for rich edit controls (v4.1 Unicode).
 ; Change History:
+;    0.2.00.01    2018-11-13/oif2003 - Added support for onEvent(), .Value, and support for:readonly, upper/lowercase
 ;    0.2.00.00    2018-11-08/oif2003 - Updated for AutoHotkey v2
 ;    0.1.05.00    2015-04-14/just me - fixed LoadRTF() not closing the file after reading
 ;    0.1.04.00    2014-08-27/just me - fixed SetParaIndent() and changed indentation sample
@@ -92,15 +93,14 @@ Class RichEdit {
          return this.Type
       }
    }
-   ;~ static myRTF
-   ;~ Value {
-      ;~ get {
-         ;~ return this.myRTF
-      ;~ }
-      ;~ set {
-         ;~ this.RTFtext(value)
-      ;~ }
-   ;~ }
+   Value {
+      get {
+         return this.GetText()
+      }
+      set {
+         this.SetText(value)
+      }
+   }
    Visible {
       get {
          return this.ctrl.Visible
@@ -117,12 +117,38 @@ Class RichEdit {
    Focus() {
       return this.ctrl.Focus()
    }
-   OnEvent(events := "", cbFunc := "", MaxThreads := 1) {
-      r := this.SetEventMask(events)
-      if isObject(cbFunc) && cbFunc.isBuiltIn != ""
-         OnMessage(0x4E, cbFunc, MaxThreads) 
-         ;OnMessage(0x111, cbFunc, MaxThreads) 
+   OnEvent(event := "", cbFunc := "", MaxThreads := 1) {
+      static AhkChangeEventRegistered := false
+      if event = "change" 
+         this.onEventChangeCB := cbFunc
+      else if event = "focus"
+         this.onEventFocusCB := cbFunc
+      else if event = "losefocus"
+         this.onEventLoseFocusCB := cbFunc
+      else return false
+      if !AhkChangeEventRegistered {
+         r := this.SetEventMask("Change")
+         if isObject(cbFunc) && cbFunc.isBuiltIn != "" {
+            this.onEventFunc := cbFunc
+            OnMessage(0x111, (param*)=>this._onEventHandler(param*), MaxThreads) 
+         }
+         else r := false
+         r := true, AhkChangeEventRegistered := true   
+      }
       return r
+   }
+   _onEventHandler(wparam, lparam, msg, sender) {
+      if msg == 0x111 {
+         change := (wparam & 0xf000000) // 0x1000000
+         if change != 4 && lparam == this.Hwnd {
+            if change == 3 && this.onEventChangeCB != ""
+               this.onEventChangeCB.Call(wparam, lparam, msg, sender)
+            else if change == 1 && this.onEventFocusCB != ""
+               this.onEventFocusCB.Call(wparam, lparam, msg, sender)
+            else if change == 2 && this.onEventLoseFocusCB != ""
+               this.onEventLoseFocusCB.Call(wparam, lparam, msg, sender)
+         }
+      }
    }
    Opt(param*) {
       this.Options(param*)
@@ -157,7 +183,8 @@ Class RichEdit {
       ;list of option keyword and [funcName*, param*] pairs. Where funcName is an array that stores the classes and method,
       ;ie : ["RichEdit, "CallBack", "someMethod"]; and param* is a variadic array of parameters to be passed
       ;We will call these at the end of the constructor to set options found in array reOptions
-      Static optionsList := {"-WRAP":[["WordWrap"], [false]]}
+      Static optionsList := {"-WRAP":[["WordWrap"], [false]], "+WRAP":[["WordWrap"], [true]], "readonly":[["SetOptions"], ["readonly"]]
+                              ,"lowercase":[["SetStyles"], ["lowercase"]] ,"uppercase":[["SetStyles"], ["uppercase"]]} ;SetOptions(Options := ""SetStyles
       
       ; Do not instantiate instances of RichEdit
       If (This.Base.HWND)
@@ -207,7 +234,7 @@ Class RichEdit {
          ; EM_GETRECT = 0xB2, EM_SETRECT = 0xB3
          VarSetCapacity(RECT, 16, 0)
          SendMessage(0xB2, 0, &RECT, , "ahk_id" HWND)
-         NumPut(NumGet(RECT, 0, "Int") + 10, RECT, 0, "Int")
+         NumPut(NumGet(RECT, 0, "Int") + 1, RECT, 0, "Int")
          NumPut(NumGet(RECT, 4, "Int") + 2,  RECT, 4, "Int")
          SendMessage(0xB3, 0, &RECT, , "ahk_id" HWND)
          ; Set advanced typographic options
@@ -236,7 +263,7 @@ Class RichEdit {
       }
       This.Base.Controls += 1
       ; Initialize the print margins
-      This.GetMargins()
+      ;This.GetMargins()
       ; Initialize the text limit
       This.LimitText(2147483647)
       
@@ -1200,6 +1227,7 @@ Class RichEdit {
       ;                  "Auto" for "automatic" (system's default) background color
       ;        CharSet : optional font character set
       ;                  1 = DEFAULT_CHARSET, 2 = SYMBOL_CHARSET
+      ;        UlColor : 
       ;        Empty parameters preserve the corresponding properties
       ; EM_SETCHARFORMAT = 0x0444
       ; SCF_DEFAULT = 0, SCF_SELECTION = 1
@@ -1642,53 +1670,53 @@ Class RichEdit {
    ; -------------------------------------------------------------------------------------------------------------------
    ; File handling
    ; -------------------------------------------------------------------------------------------------------------------
-   LoadFile(File, Mode := "Open") { ; Load file
-      ; File : file name
-      ; Mode : Open / Add / Insert
-      ;        Open   : Replace control's content
-      ;        Append : Append to conrol's content
-      ;        Insert : Insert at / replace current selection
-      If !FileExist(File)
-         Return False
-      SplitPath(File, , , Ext)
-      If (Ext = "rtf") {
-         If (Mode = "Open") {
-            Selection := False
-         } Else If (Mode = "Insert") {
-            Selection := True
-         } Else If (Mode = "Append") {
-            This.SetSel(-1, -2)
-            Selection := True
-         }
-         This.LoadRTF(File, Selection)
-      } Else {
-         Text := FileRead(File)
-         If (Mode = "Open") {
-            This.SetText(Text)
-         } Else If (Mode = "Insert") {
-            This.ReplaceSel(Text)
-         } Else If (Mode = "Append") {
-            This.SetSel(-1, -2)
-            This.ReplaceSel(Text)
-         }
-      }
-      Return True
-   }
+   ;~ LoadFile(File, Mode := "Open") { ; Load file
+      ;~ ; File : file name
+      ;~ ; Mode : Open / Add / Insert
+      ;~ ;        Open   : Replace control's content
+      ;~ ;        Append : Append to conrol's content
+      ;~ ;        Insert : Insert at / replace current selection
+      ;~ If !FileExist(File)
+         ;~ Return False
+      ;~ SplitPath(File, , , Ext)
+      ;~ If (Ext = "rtf") {
+         ;~ If (Mode = "Open") {
+            ;~ Selection := False
+         ;~ } Else If (Mode = "Insert") {
+            ;~ Selection := True
+         ;~ } Else If (Mode = "Append") {
+            ;~ This.SetSel(-1, -2)
+            ;~ Selection := True
+         ;~ }
+         ;~ This.LoadRTF(File, Selection)
+      ;~ } Else {
+         ;~ Text := FileRead(File)
+         ;~ If (Mode = "Open") {
+            ;~ This.SetText(Text)
+         ;~ } Else If (Mode = "Insert") {
+            ;~ This.ReplaceSel(Text)
+         ;~ } Else If (Mode = "Append") {
+            ;~ This.SetSel(-1, -2)
+            ;~ This.ReplaceSel(Text)
+         ;~ }
+      ;~ }
+      ;~ Return True
+   ;~ }
    ; -------------------------------------------------------------------------------------------------------------------
-   SaveFile(File) { ; Save file
-      ; File : file name
-      ; Returns True on success, otherwise False.
+   ;~ SaveFile(File) { ; Save file
+      ;~ ; File : file name
+      ;~ ; Returns True on success, otherwise False.
 
-      this.Gui.opt("+OwnDialogs")
-      SplitPath(File, , , Ext)
-      Text := Ext = "rtf" ? This.GetRTF() : This.GetText()
-      If IsObject(FileObj := FileOpen(File, "w")) {
-         FileObj.Write(Text)
-         FileObj.Close()
-         Return True
-      }
-      Return False
-   }
+      ;~ this.Gui.opt("+OwnDialogs")
+      ;~ SplitPath(File, , , Ext)
+      ;~ Text := Ext = "rtf" ? This.GetRTF() : This.GetText()
+      ;~ If IsObject(FileObj := FileOpen(File, "w")) {
+         ;~ FileObj.Write(Text)
+         ;~ FileObj.Close()
+         ;~ Return True
+      ;~ }
+      ;~ Return False
+   ;~ }
    ; -------------------------------------------------------------------------------------------------------------------
    ; Printing
    ; THX jballi ->  http://www.autohotkey.com/board/topic/45513-function-he-print-wysiwyg-print-for-the-hiedit-control/
@@ -1882,37 +1910,37 @@ Class RichEdit {
       ;~ Return True
    ;~ }
    ; -------------------------------------------------------------------------------------------------------------------
-   GetMargins() { ; Get the default print margins
-      Static PSD_RETURNDEFAULT := 0x00000400, PSD_INTHOUSANDTHSOFINCHES := 0x00000004
-           , I := 1000 ; thousandth of inches
-           , M := 2540 ; hundredth of millimeters
-           , PSD_Size := (4 * 10) + (A_PtrSize * 11)
-           , PD_Size := (A_PtrSize = 8 ? (13 * A_PtrSize) + 16 : 66)
-           , OffFlags := 4 * A_PtrSize
-           , OffMargins := OffFlags + (4 * 7)
-      If !This.HasKey("Margins") {
-         VarSetCapacity(PSD, PSD_Size, 0) ; PAGESETUPDLG structure
-         NumPut(PSD_Size, PSD, 0, "UInt")
-         NumPut(PSD_RETURNDEFAULT, PSD, OffFlags, "UInt")
-         If !DllCall("Comdlg32.dll\PageSetupDlg", "Ptr", &PSD, "UInt")
-            Return false
-         DllCall("Kernel32.dll\GlobalFree", UInt, NumGet(PSD, 2 * A_PtrSize, "UPtr"))
-         DllCall("Kernel32.dll\GlobalFree", UInt, NumGet(PSD, 3 * A_PtrSize, "UPtr"))
-         Flags := NumGet(PSD, OffFlags, "UInt")
-         Metrics := (Flags & PSD_INTHOUSANDTHSOFINCHES) ? I : M
-         Offset := OffMargins
-         This.Margins := {}
-         This.Margins.L := NumGet(PSD, Offset += 0, "Int")           ; Left
-         This.Margins.T := NumGet(PSD, Offset += 4, "Int")           ; Top
-         This.Margins.R := NumGet(PSD, Offset += 4, "Int")           ; Right
-         This.Margins.B := NumGet(PSD, Offset += 4, "Int")           ; Bottom
-         This.Margins.LT := Round((This.Margins.L / Metrics) * 1440) ; Left in twips
-         This.Margins.TT := Round((This.Margins.T / Metrics) * 1440) ; Top in twips
-         This.Margins.RT := Round((This.Margins.R / Metrics) * 1440) ; Right in twips
-         This.Margins.BT := Round((This.Margins.B / Metrics) * 1440) ; Bottom in twips
-      }
-      Return True
-   }
+   ;~ GetMargins() { ; Get the default print margins
+      ;~ Static PSD_RETURNDEFAULT := 0x00000400, PSD_INTHOUSANDTHSOFINCHES := 0x00000004
+           ;~ , I := 1000 ; thousandth of inches
+           ;~ , M := 2540 ; hundredth of millimeters
+           ;~ , PSD_Size := (4 * 10) + (A_PtrSize * 11)
+           ;~ , PD_Size := (A_PtrSize = 8 ? (13 * A_PtrSize) + 16 : 66)
+           ;~ , OffFlags := 4 * A_PtrSize
+           ;~ , OffMargins := OffFlags + (4 * 7)
+      ;~ If !This.HasKey("Margins") {
+         ;~ VarSetCapacity(PSD, PSD_Size, 0) ; PAGESETUPDLG structure
+         ;~ NumPut(PSD_Size, PSD, 0, "UInt")
+         ;~ NumPut(PSD_RETURNDEFAULT, PSD, OffFlags, "UInt")
+         ;~ If !DllCall("Comdlg32.dll\PageSetupDlg", "Ptr", &PSD, "UInt")
+            ;~ Return false
+         ;~ DllCall("Kernel32.dll\GlobalFree", UInt, NumGet(PSD, 2 * A_PtrSize, "UPtr"))
+         ;~ DllCall("Kernel32.dll\GlobalFree", UInt, NumGet(PSD, 3 * A_PtrSize, "UPtr"))
+         ;~ Flags := NumGet(PSD, OffFlags, "UInt")
+         ;~ Metrics := (Flags & PSD_INTHOUSANDTHSOFINCHES) ? I : M
+         ;~ Offset := OffMargins
+         ;~ This.Margins := {}
+         ;~ This.Margins.L := NumGet(PSD, Offset += 0, "Int")           ; Left
+         ;~ This.Margins.T := NumGet(PSD, Offset += 4, "Int")           ; Top
+         ;~ This.Margins.R := NumGet(PSD, Offset += 4, "Int")           ; Right
+         ;~ This.Margins.B := NumGet(PSD, Offset += 4, "Int")           ; Bottom
+         ;~ This.Margins.LT := Round((This.Margins.L / Metrics) * 1440) ; Left in twips
+         ;~ This.Margins.TT := Round((This.Margins.T / Metrics) * 1440) ; Top in twips
+         ;~ This.Margins.RT := Round((This.Margins.R / Metrics) * 1440) ; Right in twips
+         ;~ This.Margins.BT := Round((This.Margins.B / Metrics) * 1440) ; Bottom in twips
+      ;~ }
+      ;~ Return True
+   ;~ }
    ; -------------------------------------------------------------------------------------------------------------------
    ;~ GetPrinterCaps(DC) { ; Get printer's capacities
       ;~ Static HORZRES         := 0x08, VERTRES         := 0x0A
@@ -1937,16 +1965,14 @@ Class RichEdit {
    ;~ }
 }
 ;*****************For Ole Callback
-
-
-RE_GetDocObj(HRE) {
-   ; Get the document object of the specified RichEdit control
-   Static IID_ITextDocument := "{8CC497C0-A1DF-11CE-8098-00AA0047BE5D}"
-   DocObj := 0
-   If DllCall("SendMessage", "Ptr", HRE, "UInt", 0x043C, "Ptr", 0, "PtrP", IRichEditOle, "UInt") { ; EM_GETOLEINTERFACE
-      DocObj := ComObject(9, ComObjQuery(IRichEditOle, IID_ITextDocument), 1) ; ITextDocument
-      ObjRelease(IRichEditOle)
-   }
-   Return DocObj
-}
+;~ RE_GetDocObj(HRE) {
+   ;~ ; Get the document object of the specified RichEdit control
+   ;~ Static IID_ITextDocument := "{8CC497C0-A1DF-11CE-8098-00AA0047BE5D}"
+   ;~ DocObj := 0
+   ;~ If DllCall("SendMessage", "Ptr", HRE, "UInt", 0x043C, "Ptr", 0, "PtrP", IRichEditOle, "UInt") { ; EM_GETOLEINTERFACE
+      ;~ DocObj := ComObject(9, ComObjQuery(IRichEditOle, IID_ITextDocument), 1) ; ITextDocument
+      ;~ ObjRelease(IRichEditOle)
+   ;~ }
+   ;~ Return DocObj
+;~ }
 

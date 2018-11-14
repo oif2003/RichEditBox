@@ -5,10 +5,11 @@
 default1 := "Longest common subsequence problem`n`n`tThe longest common subsequence (LCS) problem is the problem of finding the longest subsequence common to all sequences in a set of sequences (often just two sequences). It differs from the longest common substring problem: unlike substrings, subsequences are not required to occupy consecutive positions within the original sequences. The longest common subsequence problem is a classic computer science problem, the basis of data comparison programs such as the diff utility, and has applications in computational linguistics and bioinformatics. It is also widely used by revision control systems such as Git for reconciling multiple changes made to a revision-controlled collection of files.`n`nhttps://en.wikipedia.org/wiki/Longest_common_subsequence_problem`n`n3.141592653589793238462643383239502884127169799375105840974944592307816406286...`n`nPut old version here to see what has been deleted."
 default2 := "Longest common subsequence problem (LCS)`n`n`tThe LCS problem is about finding the longest subsequence common to all sequences in a set of sequences (often just two sequences). It differs from the longest common substring problem.  Unlike substrings, subsequences are not required to occupy consecutive positions within the original sequences. The longest common subsequence problem is a classic computer science problem, and is the basis of data comparison programs such as the diff utility.  It also has applications in computational linguistics and bioinformatics, and is also widely used by revision control systems such as Git for reconciling multiple changes made to a collection of files.`n`nhttps://en.wikipedia.org/wiki/Longest_common_subsequence_problem`n`n3.141592653589793238462643383279502884197169399375105820974944592307816406286...`n`nPut new version here to see what has been added."
 
-twidth := 600, bwidth := 150, bwidth2 := 100, opts := "r40"
+twidth := 600, bwidth := 150, bwidth2 := 100, opts := "r40  0x100000" ;enable horizontal scroll
 gui := GuiCreate(,"Basic Text Comparison")
-t1 := new RichEdit(gui, opts " 0x100000 w" twidth)				;enable horizontal scroll
-t2 := new RichEdit(gui, opts " 0x100000 w" twidth " xp" twidth)	;enable horizontal scroll
+
+t1 := new RichEdit(gui, opts " w" twidth)				
+t2 := new RichEdit(gui, opts " w" twidth " xp" twidth)
 btn := gui.Add("Button", "Default w" bwidth " x" gui.MarginX + twidth - bwidth/2, "Compare/Update")
 btn.OnEvent("Click", ()=>compare())
 gui.OnEvent("Close", ()=>ExitApp())
@@ -17,13 +18,13 @@ gui.OnEvent("Close", ()=>ExitApp())
 radc := gui.Add("Radio", "vModeGroup yp0", "Char")
 radw :=	gui.Add("Radio", "yp0", "Word")
 radl :=	gui.Add("Radio", "yp0 Checked", "Line")
-		gui.Add("Text", "yp0", "Word/Char mode is very slow on long text. Close to kill process.") 
+		gui.Add("Text", "yp0", "Word/Char mode is very slow on long text.  Close to terminate.") 
 wrap := gui.Add("CheckBox", "Checked yp0 x" gui.MarginX, "Word wrap")
 		
 cpr := gui.Add("Button", "w" bwidth2 " y" btn.pos.y " x" gui.MarginX + wrap.pos.w, "Copy RED")
 cpg := gui.Add("Button", "w" bwidth2 " yp0", "Copy GREEN")
 cpc := gui.Add("Button", "w" bwidth2 " yp0", "Copy LCS")
-nde := gui.Add("CheckBox", "yp8 xp" cpc.pos.w + 5, "``n (newline) delimited")
+nde := gui.Add("CheckBox", "y" wrap.pos.y " xp" cpc.pos.w + 5, "``r``n (CRLF) delimited")
 
 cpr.onEvent("Click", ()=>copy("RED"))
 cpg.onEvent("Click", ()=>copy("GREEN"))
