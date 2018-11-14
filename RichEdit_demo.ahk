@@ -35,7 +35,7 @@ gui.show()
 ;		For RTF specific features, see Class_RichEdit.ahk for usage of
 ;			SetFont, GetRTF, SetSel, .... etc
 
-output("It's and position: w" re1.pos.w " h" re1.pos.h " x" re1.pos.x " y" re1.pos.y)
+output("Its size and position: w" re1.pos.w " h" re1.pos.h " x" re1.pos.x " y" re1.pos.y)
 
 
 output(msg) {
